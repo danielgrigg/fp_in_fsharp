@@ -189,15 +189,16 @@ let pt6 = Neg(Disj(Neg(Conj(Atom "p", Atom "q")), Neg(Disj(Atom "r", Atom "s")))
 
 let pt7 = Conj(Conj(Atom "p", Atom "q"), Atom "r")
 
-let rec normalForm prop = 
+// Proposition to NNF
+let rec negationNormalForm prop = 
   match prop with 
-  | Neg(Neg(p)) -> normalForm p
-  | Neg(Conj(p,q)) -> Disj(normalForm (Neg p), normalForm (Neg q))
-  | Neg(Disj(p,q)) -> Conj(normalForm (Neg p), normalForm (Neg q))
+  | Neg(Neg(p)) -> negationNormalForm p
+  | Neg(Conj(p,q)) -> Disj(negationNormalForm (Neg p), negationNormalForm (Neg q))
+  | Neg(Disj(p,q)) -> Conj(negationNormalForm (Neg p), negationNormalForm (Neg q))
   | Atom _ -> prop
-  | Conj(p, q) -> Conj(normalForm p, normalForm q)
-  | Disj(p, q) -> Disj(normalForm p, normalForm q)
-  | Neg p -> Neg(normalForm p)
+  | Conj(p, q) -> Conj(negationNormalForm p, negationNormalForm q)
+  | Disj(p, q) -> Disj(negationNormalForm p, negationNormalForm q)
+  | Neg p -> Neg(negationNormalForm p)
 
 let rec propStringSimple prop = 
   match prop with
@@ -241,34 +242,81 @@ let rec cnf prop =
   | Atom _ -> prop
   | Neg _ -> cnf prop
   | Disj(p, q) when literal(p) && literal(q) -> Disj(p, q)
+  | Disj(p, q) when literal(p) -> Disj(p, cnf q)
+  | Disj(p, q) when literal(q) -> Disj(cnf p, q)
   | Disj(p, Conj(q, r)) -> Conj(cnf (Disj(p, q)), cnf (Disj(p, r)))
   | Disj(Conj(p,q),r) -> Conj(cnf (Disj(p,r)), cnf (Disj(q,r)))
   | Disj(p,q) -> cnf (Disj(cnf p, cnf q))
   | Conj(p,q) -> Conj(cnf p, cnf q)
-  
-let toCnf prop = prop |> normalForm |> cnf
-let prop2str prop = prop |> toCnf |> propStr
+ 
+// Arbitrary proposition to CNF 
+let conjunctiveNormalForm prop = prop |> negationNormalForm |> cnf
+
+let cnfStr prop = prop |> conjunctiveNormalForm |> propStr
 
 // a or b or ~a or ~b -> Disj(a, Disj(b, Disj(Neg(a), Neg(b))))
 let pt13 = Disj(Atom "a", Disj(Atom "b", Disj(Neg(Atom "a"), Neg(Atom "b"))))
 
 
-let rec accDisSymbols' (prop:Prop) ((s,ns):Set<string>*Set<string>) = 
+let rec accDisSymbols (prop:Prop) ((s,ns):Set<string>*Set<string>) = 
   match prop with
   | Atom p -> (Set.add p s, ns)
   | Neg(Atom p) -> (s, Set.add p ns)
-  | Disj(Atom p, q) -> accDisSymbols' q (Set.add p s, ns)
-  | Disj(p, Atom q) -> accDisSymbols' p (Set.add q s, ns)
-  | Disj(Neg(Atom p), q) -> accDisSymbols' q (s, Set.add p ns) 
-  | Disj(p, Neg(Atom q)) -> accDisSymbols' p (s, Set.add q ns) 
+  | Disj(Atom p, q) -> accDisSymbols q (Set.add p s, ns)
+  | Disj(p, Atom q) -> accDisSymbols p (Set.add q s, ns)
+  | Disj(Neg(Atom p), q) -> accDisSymbols q (s, Set.add p ns) 
+  | Disj(p, Neg(Atom q)) -> accDisSymbols p (s, Set.add q ns) 
   | _ -> failwith "accDisSymbols invariant : not a disjunction of literals"
 
-let tautologyCheck prop = accDisSymbols' prop (Set.empty, Set.empty)
+let rec tautologyCheck prop = 
+  match prop with
+  | Atom _ -> true
+  | Neg p -> not (tautologyCheck p)
+  | Disj(_,_) -> checkDisjLiterals prop
+  | Conj(p,q) -> tautologyCheck p && tautologyCheck q
+and checkDisjLiterals prop = 
+  let (a,b) = accDisSymbols prop (Set.empty, Set.empty)
+  a = b
 
-(*let rec tautologyCheck prop symbols = *)
-  (*match prop with*)
-  (*| Atom _ -> true*)
-  (*| Neg p -> not (tautologyCheck p)*)
-  (*| Disj(Atom p, Neg(Atom q)) -> p = q*)
-  (*| Disj(Neg(Atom p), Atom q) -> p = q*)
-  (*| Disj(Atom p, Disj q) ->   (tautologyCheck q)*)
+// 6.8
+
+type Instruction =
+  | ADD
+  | SUB
+  | MULT
+  | DIV
+  | SIN
+  | COS
+  | LOG
+  | EXP
+  | PUSH of float
+
+type Stack = Stack of float list
+
+let sm0 = Stack [1.0..2.0..9.0]
+let sm1 = Stack [0.0..(3.14/4.0)..3.14]
+
+let executeBinaryOp op sm = 
+  match sm with  
+  | Stack (a::b::ops) -> (op b a)::ops |> Stack
+  | _ -> failwith "binary instruction overflow"
+
+let executeUnaryOp op sm =
+  match sm with
+  | Stack (a::ops) -> (op a)::ops |> Stack
+  | _ -> failwith "unary instruction overflow"
+
+let executePush r (Stack ops) = Stack (r::ops)
+  
+let execute (sm:Stack) (op:Instruction) :Stack = 
+  match op with
+  | ADD -> executeBinaryOp ( + ) sm
+  | SUB -> executeBinaryOp ( - ) sm
+  | MUL -> executeBinaryOp ( * ) sm
+  | DIV -> executeBinaryOp ( / ) sm
+  | SIN -> executeUnaryOp sin sm
+  | COS -> executeUnaryOp cos sm
+  | LOG -> executeUnaryOp log sm
+  | EXP -> executeUnaryOp exp sm
+  | PUSH r -> executePush r sm
+ 
