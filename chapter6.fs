@@ -278,45 +278,76 @@ and checkDisjLiterals prop =
   let (a,b) = accDisSymbols prop (Set.empty, Set.empty)
   a = b
 
-// 6.8
-
 type Instruction =
-  | ADD
-  | SUB
-  | MULT
-  | DIV
-  | SIN
-  | COS
-  | LOG
-  | EXP
-  | PUSH of float
+  | AddOp
+  | SubOp
+  | MulOp
+  | DivOp
+  | SinOp
+  | CosOp
+  | LogOp
+  | ExpOp
+  | PushOp of float
 
 type Stack = Stack of float list
 
-let sm0 = Stack [1.0..2.0..9.0]
-let sm1 = Stack [0.0..(3.14/4.0)..3.14]
 
 let executeBinaryOp op sm = 
   match sm with  
-  | Stack (a::b::ops) -> (op b a)::ops |> Stack
+  | Stack (a::b::rs) -> (op b a)::rs |> Stack
   | _ -> failwith "binary instruction overflow"
 
 let executeUnaryOp op sm =
   match sm with
-  | Stack (a::ops) -> (op a)::ops |> Stack
+  | Stack (a::rs) -> (op a)::rs |> Stack
   | _ -> failwith "unary instruction overflow"
 
-let executePush r (Stack ops) = Stack (r::ops)
+let executePush r (Stack rs) = Stack (r::rs)
   
-let execute (sm:Stack) (op:Instruction) :Stack = 
+let executeInstruction (sm:Stack) (op:Instruction) :Stack = 
   match op with
-  | ADD -> executeBinaryOp ( + ) sm
-  | SUB -> executeBinaryOp ( - ) sm
-  | MUL -> executeBinaryOp ( * ) sm
-  | DIV -> executeBinaryOp ( / ) sm
-  | SIN -> executeUnaryOp sin sm
-  | COS -> executeUnaryOp cos sm
-  | LOG -> executeUnaryOp log sm
-  | EXP -> executeUnaryOp exp sm
-  | PUSH r -> executePush r sm
- 
+  | AddOp -> executeBinaryOp ( + ) sm
+  | SubOp -> executeBinaryOp ( - ) sm
+  | MulOp -> executeBinaryOp ( * ) sm
+  | DivOp -> executeBinaryOp ( / ) sm
+  | SinOp -> executeUnaryOp sin sm
+  | CosOp -> executeUnaryOp cos sm
+  | LogOp -> executeUnaryOp log sm
+  | ExpOp -> executeUnaryOp exp sm
+  | PushOp r -> executePush r sm
+
+type Program = Instruction list
+let executeProgram (instructions:Program) :float =
+  let (Stack rs) = List.fold executeInstruction (Stack []) instructions
+  List.head rs
+
+
+let sm0 = Stack [1.0..2.0..9.0]
+let sm1 = Stack [0.0..(3.14/4.0)..3.14]
+
+let prog0 = [PushOp 2.0; PushOp 3.0; AddOp]
+let prog1 = [PushOp 2.0; PushOp 3.0; PushOp -7.0; AddOp; MulOp]
+
+// Transform an expression tree to an instruction list
+let rec trans (fe, x) = 
+  match fe with
+  | Const y -> [PushOp y]
+  | X -> [PushOp x]
+  | Add (a,b) -> transBinary AddOp (a,b) x
+  | Sub (a,b) -> transBinary SubOp (a,b) x
+  | Mul (a,b) -> transBinary MulOp (a,b) x
+  | Div (a,b) -> transBinary DivOp (a,b) x
+  | Sin a -> transUnary SinOp a x
+  | Cos a -> transUnary CosOp a x
+  | Log a -> transUnary LogOp a x
+  | Exp a -> transUnary ExpOp a x
+and transBinary op (a,b) x = ((trans (a, x)) @ (trans (b,x))) @ [op]
+and transUnary op a x = (trans (a, x)) @ [op]
+
+let trans0 = Sin(Const 3.0)
+let trans1 = Sin(Sin(X))
+let trans2 = Add(Const 2.0, Const 3.0)
+let trans3 = Add(Sub(Const 7.0, Const 3.0), Const 5.0)
+
+trans (trans3, 1.0) |> executeProgram 
+
