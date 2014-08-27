@@ -351,3 +351,40 @@ let trans3 = Add(Sub(Const 7.0, Const 3.0), Const 5.0)
 
 trans (trans3, 1.0) |> executeProgram 
 
+// 6.9
+
+type Income = int
+type Name = string
+type Department = | Department of Name * Income * Department list
+
+let company0 = Department ("Shell", 0, [])
+let company1 = Department ("Acme", 20, [Department ("Finance", 30, [])])
+let company2 = Department ("BurgerDude", 100,
+                            [Department ("R&D", 20,
+                                          [Department ("Weapons", 40, [])])
+                             Department ("HR", 10, [])
+                             Department ("Marketing", 15,
+                                         [Department ("Propaganda", 25, [])
+                                          Department ("Brainwashing", 30, [])])])
+
+let rec departmentFold f e d = 
+  match d with 
+  | Department (name, income, cs) -> List.fold (departmentFold f) (f e d) cs
+
+  
+let namesAndDepartments = 
+  departmentFold (fun e (Department (n,i,_)) -> (n,i)::e) []
+
+let totalDepartmentIncome = 
+  departmentFold (fun e (Department (_, income, _)) -> e + income ) 0 
+
+namesAndDepartments company2
+totalDepartmentIncome company2
+
+
+let nameTotalIncome (Department (name, _, _) as d') = 
+    (name, totalDepartmentIncome d')
+
+let departmentIncomes = departmentFold (fun e d' -> (nameTotalIncome d')::e) []
+ 
+departmentIncomes company2 
