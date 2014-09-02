@@ -1,5 +1,5 @@
 
-type Fexpr = 
+type Fexpr =
   | Const of float
   | X
   | Add of Fexpr * Fexpr
@@ -24,7 +24,7 @@ let rec D = function
   | Exp fe -> Mul(Exp fe, D fe)
 
 
- 
+
 
 let reduce0 = D(Mul(Const 3.0, Exp X))
 let expect0 = Mul(Const 3.0, Exp X)
@@ -41,7 +41,7 @@ let rec red = function
   | Add(e, Const 0.0) -> red e
   | Add(fe, ge) -> Add(red fe, red ge)
   | Exp fe -> Exp (red fe)
-  | e -> e 
+  | e -> e
 
 
 let rec toString = function
@@ -55,18 +55,18 @@ let rec toString = function
   | Cos e -> "cos(" + (toString e) + ")"
   | Log e -> "log(" + (toString e) + ")"
   | Exp e -> "exp(" + (toString e) + ")"
-and arg e = 
+and arg e =
   match e with
   | Const _ -> toString e
   | X -> toString e
-  | _ -> brackets e    
-and arg2 e = 
+  | _ -> brackets e
+and arg2 e =
   match e with
   | Add _ -> brackets e
   | Sub _ -> brackets e
   | _ -> toString e
 and brackets e = "(" + (toString e) + ")"
- 
+
 
 let rec postfixStr = function
   | Add(e1,e2) -> "+ " + "(" + (postfixStr e1) + ") "  + "(" + (postfixStr e2) + ")"
@@ -81,7 +81,7 @@ let e3 = Sub(X, Const 2.0)
 let e4 = Sub(X, Mul(Const 2.0, X))
 let e5 = Div(Add(e4, e3), Sub(e2, e1))
 
-type BinTree<'a,'b> = 
+type BinTree<'a,'b> =
   | Leaf of 'a
   | Node of BinTree<'a, 'b> * 'b * BinTree<'a,'b>
 
@@ -107,7 +107,7 @@ let grandma2 = Info(Unspec, "grandma2", Unspec)
 let at1 = Info(Info(grandpa1, "dad", grandma1) ,"dan", Info(Unspec, "mum", grandma2))
 
 
-let drawAncTree t = 
+let drawAncTree t =
   let rec ancestors d = function
     | Unspec -> []
     | Info (l, x, r) -> (d, string x)::(ancestors (d+1) l) @ (ancestors (d+1) r)
@@ -131,18 +131,18 @@ let maleAnc t = sexAnc false Male t
 let femaleAnc t = sexAnc true Female t
 
 
-type SearchTree<'a when 'a : comparison> = 
-  | SLeaf 
+type SearchTree<'a when 'a : comparison> =
+  | SLeaf
   | SNode of SearchTree<'a> * 'a * SearchTree<'a>
 
 let rec deleteSmallest = function
   | SLeaf -> failwith "tree invariant - must delete a node"
   | SNode(SLeaf,a,r) -> (a, r)
-  | SNode(l,a,r) -> 
+  | SNode(l,a,r) ->
       let (minValue, deleted) = deleteSmallest l
       (minValue, SNode(deleted, a, r))
 
-let rec delete x t = 
+let rec delete x t =
   match t with
   | SLeaf -> failwith "delete invariant - must delete a node"
   | SNode(SLeaf, a, SLeaf) when x = a -> SLeaf
@@ -154,7 +154,7 @@ let rec delete x t =
   | SNode(l,a,r) when x < a -> SNode(delete x l, a, r)
   | SNode(l,a,r) when x > a -> SNode(l, a, delete x r)
   | SNode(l,a,r) -> let (aSuccessor, withDeleted) = deleteSmallest r
-                    SNode(l, aSuccessor, withDeleted) 
+                    SNode(l, aSuccessor, withDeleted)
 
 
 let st0 = SNode(SLeaf, 0, SNode(SLeaf,2,SNode(SLeaf,4,SLeaf)))
@@ -164,7 +164,7 @@ let st3 = SNode(SNode(SLeaf, 3, SLeaf), 4, SNode(SNode(SLeaf, 5, SLeaf), 6, SLea
 
 //6.7
 
-type Prop = 
+type Prop =
   | Atom of string
   | Conj of Prop * Prop
   | Disj of Prop * Prop
@@ -179,8 +179,8 @@ let pt3 = Neg(Atom "p")
 let pt4 = Conj(Atom "p", Atom "q")
 let pt5 = Disj(Atom "p", Atom "q")
 
-// ~( ~(p and q) or ~(r or s) ) 
-//    = ~( (~p or ~q) or (~r and ~s)) 
+// ~( ~(p and q) or ~(r or s) )
+//    = ~( (~p or ~q) or (~r and ~s))
 //    = ~(~p or ~q) and ~(~r and ~s)
 //    = (p and q) and (r or s)
 //
@@ -190,8 +190,8 @@ let pt6 = Neg(Disj(Neg(Conj(Atom "p", Atom "q")), Neg(Disj(Atom "r", Atom "s")))
 let pt7 = Conj(Conj(Atom "p", Atom "q"), Atom "r")
 
 // Proposition to NNF
-let rec negationNormalForm prop = 
-  match prop with 
+let rec negationNormalForm prop =
+  match prop with
   | Neg(Neg(p)) -> negationNormalForm p
   | Neg(Conj(p,q)) -> Disj(negationNormalForm (Neg p), negationNormalForm (Neg q))
   | Neg(Disj(p,q)) -> Conj(negationNormalForm (Neg p), negationNormalForm (Neg q))
@@ -200,7 +200,7 @@ let rec negationNormalForm prop =
   | Disj(p, q) -> Disj(negationNormalForm p, negationNormalForm q)
   | Neg p -> Neg(negationNormalForm p)
 
-let rec propStringSimple prop = 
+let rec propStringSimple prop =
   match prop with
   | Atom p -> string p
   | Neg p -> "~" + propStringSimple p
@@ -232,13 +232,13 @@ let pt11 = Neg(Disj(Atom "b", Atom "c"))
 // a and (b or (d and e)) -> a and (b or d) and (b or e)
 let pt12 = Conj(Atom "a", Disj(Atom "b", Conj(Atom "d", Atom "e")))
 
-let literal = function 
+let literal = function
   | Atom _ -> true
   | Neg _ -> true
   | _ -> false
 
-let rec cnf prop = 
-  match prop with 
+let rec cnf prop =
+  match prop with
   | Atom _ -> prop
   | Neg _ -> cnf prop
   | Disj(p, q) when literal(p) && literal(q) -> Disj(p, q)
@@ -248,8 +248,8 @@ let rec cnf prop =
   | Disj(Conj(p,q),r) -> Conj(cnf (Disj(p,r)), cnf (Disj(q,r)))
   | Disj(p,q) -> cnf (Disj(cnf p, cnf q))
   | Conj(p,q) -> Conj(cnf p, cnf q)
- 
-// Arbitrary proposition to CNF 
+
+// Arbitrary proposition to CNF
 let conjunctiveNormalForm prop = prop |> negationNormalForm |> cnf
 
 let cnfStr prop = prop |> conjunctiveNormalForm |> propStr
@@ -258,23 +258,23 @@ let cnfStr prop = prop |> conjunctiveNormalForm |> propStr
 let pt13 = Disj(Atom "a", Disj(Atom "b", Disj(Neg(Atom "a"), Neg(Atom "b"))))
 
 
-let rec accDisSymbols (prop:Prop) ((s,ns):Set<string>*Set<string>) = 
+let rec accDisSymbols (prop:Prop) ((s,ns):Set<string>*Set<string>) =
   match prop with
   | Atom p -> (Set.add p s, ns)
   | Neg(Atom p) -> (s, Set.add p ns)
   | Disj(Atom p, q) -> accDisSymbols q (Set.add p s, ns)
   | Disj(p, Atom q) -> accDisSymbols p (Set.add q s, ns)
-  | Disj(Neg(Atom p), q) -> accDisSymbols q (s, Set.add p ns) 
-  | Disj(p, Neg(Atom q)) -> accDisSymbols p (s, Set.add q ns) 
+  | Disj(Neg(Atom p), q) -> accDisSymbols q (s, Set.add p ns)
+  | Disj(p, Neg(Atom q)) -> accDisSymbols p (s, Set.add q ns)
   | _ -> failwith "accDisSymbols invariant : not a disjunction of literals"
 
-let rec tautologyCheck prop = 
+let rec tautologyCheck prop =
   match prop with
   | Atom _ -> true
   | Neg p -> not (tautologyCheck p)
   | Disj(_,_) -> checkDisjLiterals prop
   | Conj(p,q) -> tautologyCheck p && tautologyCheck q
-and checkDisjLiterals prop = 
+and checkDisjLiterals prop =
   let (a,b) = accDisSymbols prop (Set.empty, Set.empty)
   a = b
 
@@ -292,8 +292,8 @@ type Instruction =
 type Stack = Stack of float list
 
 
-let executeBinaryOp op sm = 
-  match sm with  
+let executeBinaryOp op sm =
+  match sm with
   | Stack (a::b::rs) -> (op b a)::rs |> Stack
   | _ -> failwith "binary instruction overflow"
 
@@ -303,8 +303,8 @@ let executeUnaryOp op sm =
   | _ -> failwith "unary instruction overflow"
 
 let executePush r (Stack rs) = Stack (r::rs)
-  
-let executeInstruction (sm:Stack) (op:Instruction) :Stack = 
+
+let executeInstruction (sm:Stack) (op:Instruction) :Stack =
   match op with
   | AddOp -> executeBinaryOp ( + ) sm
   | SubOp -> executeBinaryOp ( - ) sm
@@ -329,7 +329,7 @@ let prog0 = [PushOp 2.0; PushOp 3.0; AddOp]
 let prog1 = [PushOp 2.0; PushOp 3.0; PushOp -7.0; AddOp; MulOp]
 
 // Transform an expression tree to an instruction list
-let rec trans (fe, x) = 
+let rec trans (fe, x) =
   match fe with
   | Const y -> [PushOp y]
   | X -> [PushOp x]
@@ -349,7 +349,7 @@ let trans1 = Sin(Sin(X))
 let trans2 = Add(Const 2.0, Const 3.0)
 let trans3 = Add(Sub(Const 7.0, Const 3.0), Const 5.0)
 
-trans (trans3, 1.0) |> executeProgram 
+trans (trans3, 1.0) |> executeProgram
 
 // 6.9
 
@@ -367,24 +367,34 @@ let company2 = Department ("BurgerDude", 100,
                                          [Department ("Propaganda", 25, [])
                                           Department ("Brainwashing", 30, [])])])
 
-let rec departmentFold f e d = 
-  match d with 
+let rec departmentFold f e d =
+  match d with
   | Department (name, income, cs) -> List.fold (departmentFold f) (f e d) cs
 
-  
-let namesAndDepartments = 
+
+let namesAndDepartments =
   departmentFold (fun e (Department (n,i,_)) -> (n,i)::e) []
 
-let totalDepartmentIncome = 
-  departmentFold (fun e (Department (_, income, _)) -> e + income ) 0 
+let totalDepartmentIncome =
+  departmentFold (fun e (Department (_, income, _)) -> e + income ) 0
 
 namesAndDepartments company2
 totalDepartmentIncome company2
 
 
-let nameTotalIncome (Department (name, _, _) as d') = 
+let nameTotalIncome (Department (name, _, _) as d') =
     (name, totalDepartmentIncome d')
 
 let departmentIncomes = departmentFold (fun e d' -> (nameTotalIncome d')::e) []
- 
-departmentIncomes company2 
+
+departmentIncomes company2
+
+let departmentToString dep =
+  let rec depString n dep' =
+    match dep' with
+    | (Department (name, _, cs)) ->
+        (indentedName name n) + System.String.Concat (List.map (depString (n+1)) cs)
+  and indentedName name' depth = (String.replicate (depth*3) " ") + name' + "\n"
+  depString 0 dep
+
+departmentToString company2 |> printfn "%A"
